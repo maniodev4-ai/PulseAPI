@@ -16,8 +16,19 @@ MODEL_PATH = Path("ml/saved_model.pkl")
 
 CLASS_NAMES = ["class_0", "class_1", "class_2"]
 
-with open(MODEL_PATH, "rb") as f:
-    model = pickle.load(f)
+
+def _load_model():
+    """Load the trained model from disk, raising a clear error if missing."""
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(
+            f"Model file not found at {MODEL_PATH}. "
+            "Run 'python ml/train.py' to generate it before starting the API."
+        )
+    with open(MODEL_PATH, "rb") as f:
+        return pickle.load(f)
+
+
+model = _load_model()
 
 
 def predict(features: WineFeatures) -> PredictionResponse:
@@ -31,26 +42,20 @@ def predict(features: WineFeatures) -> PredictionResponse:
     Returns:
         A PredictionResponse containing the predicted class,
         its name, and the model's confidence in that prediction.
+
+    Raises:
+        ValueError: If any feature value is negative, since none
+                    of the wine measurements can physically be negative.
     """
-    input_array = np.array(
-        [
-            [
-                features.alcohol,
-                features.malic_acid,
-                features.ash,
-                features.alcalinity_of_ash,
-                features.magnesium,
-                features.total_phenols,
-                features.flavanoids,
-                features.nonflavanoid_phenols,
-                features.proanthocyanins,
-                features.color_intensity,
-                features.hue,
-                features.od280_od315_of_diluted_wines,
-                features.proline,
-            ]
-        ]
-    )
+    feature_dict = features.model_dump()
+    for name, value in feature_dict.items():
+        if value < 0:
+            raise ValueError(
+                f"Invalid value for '{name}': {value}. "
+                "Wine feature measurements cannot be negative."
+            )
+
+    input_array = np.array([list(feature_dict.values())])
 
     predicted_class = int(model.predict(input_array)[0])
     probabilities = model.predict_proba(input_array)[0]
