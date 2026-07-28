@@ -4,3 +4,5 @@ __pycache__/
 .env
 .pytest_cache/
 ml/saved_model.pkl
+*.docx
+~$*.docx
