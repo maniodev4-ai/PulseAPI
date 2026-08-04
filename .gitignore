@@ -3,6 +3,5 @@ __pycache__/
 *.pyc
 .env
 .pytest_cache/
-ml/saved_model.pkl
 *.docx
 ~$*.docx
