@@ -100,3 +100,9 @@ def test_predict_endpoint_rejects_negative_values():
     response = client.post("/predict", json=payload)
     assert response.status_code == 400
     assert "negative" in response.json()["detail"]
+
+def test_get_predictions_returns_list():
+    """The /predictions endpoint should return a list."""
+    response = client.get("/predictions")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
