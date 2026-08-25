@@ -46,5 +46,5 @@ class Prediction(Base):
 
     # Metadata
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=text("NOW()"), nullable=False
+        DateTime, default=datetime.utcnow, server_default=text("NOW()"), nullable=False
     )

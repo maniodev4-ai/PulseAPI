@@ -9,6 +9,8 @@ from app.database.connection import SessionLocal
 from app.database.models import Prediction
 from app.models.schema import WineFeatures, PredictionResponse
 from app.services.predictor import predict
+from app.auth.dependencies import get_api_key
+from app.auth.models import APIKey
 
 router = APIRouter()
 
@@ -30,9 +32,8 @@ def health_check() -> dict:
     """
     Health check endpoint.
 
+    Public — no authentication required.
     Returns a simple status to confirm the API is running.
-    Used by monitoring tools, load balancers, or just you,
-    to verify the service is alive.
     """
     return {"status": "ok"}
 
@@ -40,16 +41,19 @@ def health_check() -> dict:
 @router.post("/predict", response_model=PredictionResponse)
 def predict_wine_class(
     features: WineFeatures,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    api_key: APIKey = Depends(get_api_key),
 ) -> PredictionResponse:
     """
     Predict the wine class from input features.
 
+    Protected — requires a valid X-API-Key header.
     Accepts the 13 chemical measurements the model was trained on,
     returns the predicted class with confidence, and saves the
-    prediction to the database for history and analysis.
+    prediction to the database.
 
     Raises:
+        HTTPException: 401 if API key is missing or invalid.
         HTTPException: 400 if any feature value is invalid.
     """
     try:
@@ -57,7 +61,6 @@ def predict_wine_class(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    # Save prediction to database
     record = Prediction(
         alcohol=features.alcohol,
         malic_acid=features.malic_acid,
@@ -81,11 +84,16 @@ def predict_wine_class(
 
     return result
 
+
 @router.get("/predictions")
-def get_predictions(db: Session = Depends(get_db)) -> list:
+def get_predictions(
+    db: Session = Depends(get_db),
+    api_key: APIKey = Depends(get_api_key),
+) -> list:
     """
     Retrieve all past predictions from the database.
 
+    Protected — requires a valid X-API-Key header.
     Returns a list of every prediction ever made, ordered
     by most recent first.
     """
